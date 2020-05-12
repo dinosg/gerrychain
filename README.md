@@ -16,7 +16,7 @@ Districts are indexed in the panda DataFrame objects to the actual congressional
 ______
 
 templates:
-files - (state)_race_proxyelection.py  eg. MI_SEN_Pres2016.py contain templates for input variables, eg filenames, tagnames etc. all in 1 place to be read into script running gerrychain... avoiding all those confusing parameters that need to be set differently depending on the run you're doing
+files - (state)_race_proxyelection.py  eg. MI_SENDIST_PRES16.py (michigan, state senate districting using 16 pres election as proxy) contain templates for input variables, eg filenames, tagnames etc. all in 1 place to be read into script running gerrychain... avoiding all those confusing parameters that need to be set differently depending on the run you're doing. 
 
 _____
 corrected datafiles:
