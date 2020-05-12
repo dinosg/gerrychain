@@ -13,6 +13,11 @@ strcmp_matlab.py does some string recognition and indexing what I'm used to doin
 
 Districts are indexed in the panda DataFrame objects to the actual congressional (or whatever) district names, in a format friendly to congressmen and politicians, by get_districtlabels.py
 
+______
+
+templates:
+files - (state)_race_proxyelection.py  eg. MI_SEN_Pres2016.py contain templates for input variables, eg filenames, tagnames etc. all in 1 place to be read into script running gerrychain... avoiding all those confusing parameters that need to be set differently depending on the run you're doing
+
 _____
 corrected datafiles:
 
