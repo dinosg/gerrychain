@@ -5,7 +5,7 @@ runningachain_plain.py duplicates what's available in the gerrychain archive, wi
 
 runningachain_50.pc adds a normalizing feature to treat the statewide election used as a proxy for votes by district, as a 50-50% partisan split. Thus the results by district, if they differ by a 50-50 allocation on average, are the result of gerrymandering and not the strength of the statewide candidate used as a voter proxy by district
 
-chain_parallel.py uses the multiprocessing module to implement a parallel pool. I achieved an x 36 speed increase on my server (40 core). It also uses condense_datastruct.py to unwind the datastructure created by a parallel markov chain computation
+chain_parallelx.py uses the multiprocessing module to implement a parallel pool. I achieved an x 36 speed increase on my server (40 core). It also uses condense_datastruct.py to unwind the datastructure created by a parallel markov chain computation
 
 chain_parallel_50.py uses multiprocessing and normalizes the statewide election proxy to 50-50%.
 
