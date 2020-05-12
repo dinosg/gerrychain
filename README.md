@@ -13,6 +13,11 @@ strcmp_matlab.py does some string recognition and indexing what I'm used to doin
 
 Districts are indexed in the panda DataFrame objects to the actual congressional (or whatever) district names, in a format friendly to congressmen and politicians, by get_districtlabels.py
 
+_____
+corrected datafiles:
 
 TX_vtds_x.zip   contains *fixed* shapefiles for Texas - original data archive from https://github.com/mggg-states  wasn't readable due to a point boundary in the North Texas panhandle... this shapefile was buffered and healed
 
+WI_ltsb_corrected_final.json contains *fixed* shapefiles for Wisconsin, with no disconnected islands
+
+MI_precincts.json contains *fixed* shapefiles for Michigan, no islands, UP and LP connected (!)
