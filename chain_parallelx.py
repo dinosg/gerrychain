@@ -103,7 +103,8 @@ def multichain_run(i1, graph, chainlength, my_apportionment, my_electionproxy, m
         datastruct = pandas.concat([datastruct, datax])
     return i1, rsw, rmm, reg, datastruct           
 
-#SET CONSTANTS HERE:
+#MAIN PROGRAM HERE:
+    #few key lines for making parallel pool not mess up (freeze_support() and __spec__ definition)
 if __name__ == '__main__':
     freeze_support()
     __spec__ = "ModuleSpec(name='builtins', loader=<class '_frozen_importlib.BuiltinImporter'>)"
@@ -124,7 +125,6 @@ if __name__ == '__main__':
     #exec(open("input_templates/PA_HDIST_SEN12.py").read()) 
     #exec(open("input_templates/PA_CD_2011_SEN12.py").read()) 
     exec(open("input_templates/WI_SEN_SEN16.py").read()) 
-    my_electionproxy_alternate = my_electionproxy
     elections = get_elections(state)
     #read in data file here:
     """

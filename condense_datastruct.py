@@ -8,6 +8,8 @@ reduce datastruct to a new, condesed subarray containing the uncorrelated data (
 import time
 import matplotlib.pyplot as plt
 import pandas as pd
+import backup_chain as bc
+
 
 data_condensed = pd.DataFrame([]) #null dataframe to start
 threadcount = len(datastruct) #depth of datastruct list object
@@ -36,10 +38,13 @@ data_condensed.boxplot(positions=range(len(data_condensed.columns)))
 plt.plot(sorted(data1.iloc[0]), "ro")
 
 # Annotate
-ax.set_title("Comparing the 2011 plan to an condensed, uncorrelated ensemble")
-ax.set_ylabel("Democratic vote % (Senate 2012)")
+titlestr = state + " " + my_apportionment + "  x" + str(chainlength) + " x" + str(poolsize)
+ax.set_title(titlestr)
+ax.set_ylabel("Democratic vote % " + my_electionproxy)
 ax.set_xlabel("Sorted districts")
 ax.set_ylim(0, 1)
 ax.set_yticks([0, 0.25, 0.5, 0.75, 1])
 
 plt.show()
+outname = "redist_data/" + state + "_" + my_apportionment + "_" + my_electionproxy + "x" + str(chainlength)+ "x" + str(poolsize)
+bc.save(outname,data_condensed, reg_clean, rmm_clean, rsw_clean)
