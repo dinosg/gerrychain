@@ -7,7 +7,7 @@ runningachain_50.pc adds a normalizing feature to treat the statewide election u
 
 chain_parallelx.py uses the multiprocessing module to implement a parallel pool. I achieved an x 36 speed increase on my server (40 core). It also uses condense_datastruct.py to unwrap the datastructure created by a parallel markov chain computation, and only select one out of every nn (default 100) data rows to avoid tons of correlated, duplicate-ish data
 
-chain_parallel_50.py uses multiprocessing and normalizes the statewide election proxy to 50-50%. If the labels for the my_proxy elections don't follow a simple convention (electionD  , electionR  eg USS2012D, USS2012R) for democratic & republican vote totals however, it crashes
+chain_parallel_50.py uses multiprocessing and normalizes the statewide election proxy to 50-50%. 
 
 strcmp_matlab.py does some string recognition and indexing what I'm used to doing (as in Matlab)
 
