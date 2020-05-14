@@ -7,6 +7,7 @@ uses recom proposal
 """
 
 import matplotlib.pyplot as plt
+import backup_chain as bc
 from gerrychain import (GeographicPartition, Partition, Graph, MarkovChain,
                         proposals, updaters, constraints, accept, Election)
 from gerrychain.proposals import (recom, propose_random_flip)
@@ -23,15 +24,10 @@ from gerrychain.tree import recursive_tree_part
 
 #SET CONSTANTS HERE:
 #dontfeedin = 1  #if set=0, feeds in data, otherwise skip
-my_apportionment = "CD_2011"  #"CD_2011"    #type of district boundaries to calculate - eg US congressional, state senate, house etc.
-my_electionproxy = "SEN12"           #pick the election to use as a statewide proxy for partisan voting for districted seats
-my_electionproxy_alternate ="SEN12"  #alternate name, see 'elections' variable below
-#my_electiondatafile = "./shapefiles_multistate/TX_vtds/TX_vtds_x.shp"  #"./PA-shapefiles-master/PA_VTDs.json"   #PATH to the election data
-#my_electiondatafile  = "./shapefiles_multistate/WI-shapefiles-master/WI_wards_12_16/WI_ltsb_corrected_final.json"
-my_electiondatafile = "./PA-shapefiles-master/PA_VTDs.json"   #PATH to the election data
+exec(open("input_templates/WI_SEN_SEN16.py").read()) 
 markovchainlength = 1000  #length of Markov chain
 proposaltype = "recom"
-state = "PA"
+
 poptol = 0.02
 elections = get_elections(state)
 if 'dontfeedin' in globals():
@@ -97,7 +93,7 @@ compactness_bound = constraints.UpperBound(
 
 pop_constraint = constraints.within_percent_of_ideal_population(initial_partition, poptol)
 nparts = len(initial_partition)
-ranpart = recursive_tree_part(graph_PA, range(nparts), ideal_population, popkey,poptol,node_repeats=1)
+ranpart = recursive_tree_part(graph_PA, range(nparts), ideal_population, popkey,poptol-.01,node_repeats=1)
 randpartition = GeographicPartition(graph_PA,assignment = ranpart, updaters = my_updaters)
 exec(open("partition_clean.py").read()) 
 chain = MarkovChain(
@@ -117,7 +113,7 @@ data = pandas.DataFrame(
 )
 t0=time.time()
 #now can do initial_partition and know my_electionproxy will be OK, won't need alternate
-initial_partition, graph_PA, my_updaters = norm_data(graph_PA, my_updaters, my_apportionment, my_electionproxy, my_electionproxy_alternate)
+initial_partition, graph_PA, my_updaters = norm_data(graph_PA, my_updaters, my_apportionment, my_electionproxy, my_electionproxy_alternate, state)
 cds = get_labels(initial_partition, my_electionproxy) #get congressional district labels
 
 #CONFIGURE MARKOV CHAIN
@@ -167,8 +163,9 @@ data1.boxplot(ax=ax, positions=range(len(data1.columns)))
 plt.plot(data1.iloc[0], "ro")
 
 # Annotate
-ax.set_title("Comparing the 2011 plan to an ensemble")
-ax.set_ylabel("Democratic vote % (Senate 2012)")
+titlestr = state + " " + my_apportionment + "  x" + str(markovchainlength) + " normalized"
+ax.set_title(titlestr)
+ax.set_ylabel("Democratic vote % " + my_electionproxy)
 ax.set_xlabel("Sorted districts")
 ax.set_ylim(0, 1)
 ax.set_yticks([0, 0.25, 0.5, 0.75, 1])
@@ -180,3 +177,5 @@ plt.show()
 
  
 t1=time.time()
+outname = "redist_data/" + state + "_" + my_apportionment + "_" + my_electionproxy + "x" + str(markovchainlength)
+bc.save(outname,data1, reg, rmm, rsw)

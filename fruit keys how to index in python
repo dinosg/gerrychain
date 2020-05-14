@@ -1,0 +1,104 @@
+fruit={"lemons" :['yellow', 'green'], "apples": ['green','red', 'yellow'], "pears" :['green','yellow','brown'], "grapefruit" : ['yellow', 'red']}
+fk = fruit.keys()
+fkl = list(fk)
+for nn in range(len(fkl)):
+    print(fkl[nn])
+
+
+
+""" then you get:
+lemons
+apples
+pears
+grapefruit """'
+
+
+built-in methods on dict objects - 
+update: adds a new element
+pop: deletes element
+get: gets element W/O deleting it
+copy: copies b/c if you just have dict2  = dict1, changes to dict2 carry over to dict1... copied BY REFERENCE
+use copy.deepcopy  (or copy() function)
+can NOT copy partition objects!!!!
+values: gets values w/o keys
+
+initial_partition.__dict__   gives dict keys and assignments!!
+
+
+ipp =initial_partition["population"]
+Out[262]: 
+{3: 705317,
+ 5: 706258,
+ 10: 705327,
+ 9: 705679,
+ 12: 705698,
+ 6: 705782,
+ 15: 705549,
+ 7: 706391,
+ 16: 705629,
+ 11: 705883,
+ 4: 705669,
+ 8: 705689,
+ 17: 705830,
+ 18: 705847,
+ 14: 705526,
+ 13: 705028,
+ 2: 705689,
+ 1: 705588}
+
+ ipl = list(ipp)
+ for nn in range(len(ipl)):
+    print(nn, ipl[nn], ipp[ipl[nn]])
+
+
+   prints in order WITH THE SUBSCRIPTS RIGHT
+   ix = sorted(range(len(ipl)), key=ipl.__getitem__)  gives the INDEX of ipl if it WERE SORTED, => matlab [~, ix] = sort(ipl)
+
+
+   to get a list of strings with same values as ipl,
+
+
+#but don't really need this. all you need is:
+
+data1.columns = ipl   #(the list of districts, in integer format)
+data1.boxplot()    #does the boxplot w/ relabelled axis  - yes!!
+
+Indexing: IMPORTANT!!!
+NP Arrays and other arrays can be indexed. LISTS CAN NOT BE INDEXED except using a loop structure. 
+eg.
+ipl = [3, 5, 10, 9, 12, 6, 15, 7, 16, 11, 4, 8, 17, 18, 14, 13, 2, 1] # IS A LIST
+apl = array(ipl)  #IS AN ARRAY
+napl = np.array(ipl) #is a NP ARRAY
+idx = [0, 3, 1]
+
+napl[idx]
+Out[505]: array([3, 9, 7])
+
+apl[idx]
+Out[506]: array([3, 9, 7])
+
+ipl[idx]
+Traceback (most recent call last):
+
+  File "<ipython-input-507-70a6f4c1d954>", line 1, in <module>
+    ipl[idx]
+
+TypeError: list indices must be integers or slices, not list
+
+[ipl[n] for n in idx]
+Out[508]: [3, 9, 7]
+type(gl)
+Out[510]: list
+
+VERY INTERESTING for use of property and _prefix for attributes: https://www.programiz.com/python-programming/property
+"By using property, we can see that, we modified our class and implemented the value constraint...
+
+Finally note that, the actual temperature value is stored in the private variable _temperature. The attribute temperature is a property object which provides interface to this private variable.""
+
+to make a LIST of a specific size (w x h)
+Matrix = [[0 for x in range(w)] for y in range(h)] 
+You can now add items to the list:
+
+Matrix[0][0] = 1
+Matrix[6][0] = 3 # error! range... 
+Matrix[0][6] = 3 # valid

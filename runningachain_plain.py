@@ -26,13 +26,13 @@ import backup_chain as bc
 #SET CONSTANTS HERE:
 dontfeedin = 0  #if set=0, feeds in data, otherwise skip
 
-markovchainlength = 5000  #length of Markov chain
+markovchainlength = 4000  #length of Markov chain
 proposaltype = "recom"
 #exec(open("input_templates/WI_SEN_SEN16.py").read()) 
 #exec(open("input_templates/PA_CD_2011_SEN12.py").read()) 
 
-exec(open("input_templates/MI_HDIST_PRES16.py").read()) 
-
+#exec(open("input_templates/MI_HDIST_PRES16.py").read()) 
+exec(open("input_templates/WI_SEN_SEN16.py").read()) 
 elections = get_elections(state)
 
 poptol = 0.03 # population tolerance
