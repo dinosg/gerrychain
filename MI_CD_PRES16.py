@@ -8,6 +8,7 @@ script to define constants for file read-in and computation as below
 
 my_apportionment = "CD"    #type of district boundaries to calculate - eg US congressional, state senate, house etc.
 my_electionproxy = "PRES16"           #pick the election to use as a statewide proxy for partisan voting for districted seats
+my_electionproxy_alternate = my_electionproxy
 #my_electiondatafile = "./PA-shapefiles-master/PA_VTDs.json"   #PATH to the election data
 my_electiondatafile ='./shapefiles_multistate/MI-shapefiles-master/MI_precincts/MI_precincts.json'
 state = "MI"
