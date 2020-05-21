@@ -32,9 +32,10 @@ import numpy as np
 from gerrychain.metrics import mean_median, efficiency_gap
 from get_districtlabels import get_labels
 from get_electioninfo import get_elections
- 
+import random
+import os 
 def multichain_run(i1, graph, chainlength, my_apportionment, my_electionproxy, my_electionproxy_alternate, rsw, rmm, reg, datastruct, state):
-     
+    random.seed(os.urandom(10)*i1) 
     poptol = 0.03  #min population deviation
     elections = get_elections(state)
     
@@ -110,7 +111,8 @@ if __name__ == '__main__':
     __spec__ = "ModuleSpec(name='builtins', loader=<class '_frozen_importlib.BuiltinImporter'>)"
     dontfeedin = 0  #if set=0, feeds in data, otherwise skip
     poolsize=40
-    chainlength=4000
+    chainlength=100
+    normalize=''
       
         #    set_start_method("spawn")
         #    set_start_method("spawn")
@@ -124,7 +126,8 @@ if __name__ == '__main__':
     proposaltype = "recom"
     #exec(open("input_templates/PA_HDIST_SEN12.py").read()) 
     #exec(open("input_templates/PA_CD_2011_SEN12.py").read()) 
-    exec(open("input_templates/WI_SEN_SEN16.py").read()) 
+    #exec(open("input_templates/MI_SENDIST_PRES16.py").read()) 
+    exec(open("input_templates/PA_CD_2011_SEN12.py").read()) 
     elections = get_elections(state)
     #read in data file here:
     """

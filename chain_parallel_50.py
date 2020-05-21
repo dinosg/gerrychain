@@ -33,9 +33,11 @@ from gerrychain.metrics import mean_median, efficiency_gap
 from get_districtlabels import get_labels
 from norm_50 import norm_data
 from get_electioninfo import get_elections
-
+import random
+import os 
  
 def multichain_run(i1, graph, chainlength, my_apportionment, my_electionproxy, my_electionproxy_alternate, rsw, rmm, reg, datastruct, state):
+    random.seed(os.urandom(10)*i1) 
     poptol = 0.02  #min % population deviation per district
     elections = get_elections(state)
 
@@ -112,10 +114,11 @@ if __name__ == '__main__':
     dontfeedin = 0  #if set=0, feeds in data, otherwise skip
     poolsize=40
     chainlength=1000
+    normalize=' normalized'
 #DEFINE CONSTANTS:
     dontfeedin = 0  #if set=0, feeds in data, otherwise skip
     
-    exec(open("input_templates/PA_CD_2011_SEN12.py").read()) 
+    exec(open("input_templates/MI_SENDIST_PRES16.py").read()) 
    # my_electionproxy_alternate = my_electionproxy
     #for PA data:
     
