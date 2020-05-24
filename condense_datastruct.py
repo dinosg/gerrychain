@@ -24,8 +24,10 @@ for ii in range(threadcount):
     for kk in indexer:
         data_condensed= pd.concat([data_condensed,data_x[kk:kk+1]])
       
-        
-
+outname = "redist_data/" + state + "_" + my_apportionment + "_" + my_electionproxy + "x" + str(chainlength)+ "x" + str(poolsize) + normalize
+bc.save1(outname,data_condensed, reg_clean, rmm_clean, rsw_clean, reg, rmm, rsw)
+print(t1-t0, "seconds\n")       
+plt.figure()
 fig, ax = plt.subplots(figsize=(8, 6))
 
 # Draw 50% line
@@ -38,7 +40,7 @@ data_condensed.boxplot(positions=range(len(data_condensed.columns)))
 plt.plot(sorted(data1.iloc[0]), "ro")
 
 # Annotate
-titlestr = state + " " + my_apportionment + "  x" + str(chainlength) + " x" + str(poolsize)
+titlestr = state + " " + my_apportionment + "  x" + str(chainlength) + " x" + str(poolsize) + normalize
 ax.set_title(titlestr)
 ax.set_ylabel("Democratic vote % " + my_electionproxy)
 ax.set_xlabel("Sorted districts")
@@ -46,5 +48,3 @@ ax.set_ylim(0, 1)
 ax.set_yticks([0, 0.25, 0.5, 0.75, 1])
 
 plt.show()
-outname = "redist_data/" + state + "_" + my_apportionment + "_" + my_electionproxy + "x" + str(chainlength)+ "x" + str(poolsize)
-bc.save(outname,data_condensed, reg_clean, rmm_clean, rsw_clean)
