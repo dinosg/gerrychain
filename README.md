@@ -13,6 +13,8 @@ strcmp_matlab.py does some string recognition and indexing what I'm used to doin
 
 Districts are indexed in the panda DataFrame objects to the actual congressional (or whatever) district names, in a format friendly to congressmen and politicians, by get_districtlabels.py
 
+Certain simulation runs have problems running Markov chains - either because even after many chain steps, Markov states remain correlated, or the configurations become hung up (or both). Pennsylvania state House districts are one such case so instead of performing a Markov simulation, random districts are created for *each* successive state using recursive_tree_part from gerrychain. Timeout problems are avoiding using stopit (install using pip)
+
 ______
 
 input_templates:
