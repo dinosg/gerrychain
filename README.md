@@ -15,6 +15,15 @@ Districts are indexed in the panda DataFrame objects to the actual congressional
 
 Certain simulation runs have problems running Markov chains - either because even after many chain steps, Markov states remain correlated, or the configurations become hung up (or both). Pennsylvania state House districts are one such case so instead of performing a Markov simulation, random districts are created for *each* successive state using recursive_tree_part from gerrychain. Timeout problems are avoiding using stopit (install using pip)
 
+
+any file with 'composite' or 'comp' in the filename adds ALL elections available to it in the dataset and calculates metrics covering ALL of them (by numeric mean) as to avoid biasing a result by a single idiosyncratic election
+
+files with 'ppartonly' in name do NOT compute Markov chains at all but instead generate random partitions each and every time to get unbiased samples. Slow but necessary for cases when  Markov chain fails (as they often do for State House districts)
+
+****
+files with 'county' in name have maximum # county splits as a constraint. These files require modifications to gerrychain class - see 'runningachain_xtended' for simple case.
+
+
 ______
 
 input_templates:
@@ -28,3 +37,6 @@ TX_vtds_x.zip   contains *fixed* shapefiles for Texas - original data archive fr
 WI_ltsb_corrected_final.json contains *fixed* shapefiles for Wisconsin, with no disconnected islands
 
 MI_precincts.json contains *fixed* shapefiles for Michigan, no islands, UP and LP connected (!)
+
+
+
