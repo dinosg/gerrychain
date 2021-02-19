@@ -12,3 +12,4 @@ my_electionproxy_alternate = "USS12"
 my_electiondatafile = "./PA-shapefiles-master/PA_VTDs.json"   #PATH to the election data
 #my_electiondatafile ="./shapefiles_multistate/WI-shapefiles-master/WI_wards_12_16/WI_ltsb_corrected_final.json"
 state = "PA"
+poptol=0.06

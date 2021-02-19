@@ -13,4 +13,9 @@ my_electionproxy_alternate = "USS"
 #my_electiondatafile = "./PA-shapefiles-master/PA_VTDs.json"   #PATH to the election data
 my_electiondatafile ="./shapefiles_multistate/WI-shapefiles-master/WI_wards_12_16/WI_ltsb_corrected_final.json"
 state = "WI"
-poptol=0.06
+maxsplitlist=[ 150,110, 100, 90, 85, 84, 83]
+cutedgemaxlist  = [2,2,2,1.2,1.2,1.2, 1.2]
+
+maxsplitlist=[75, 65  , 50]
+cutedgemaxlist  = [1.2,1.2, 1.2]
+poptol =0.06

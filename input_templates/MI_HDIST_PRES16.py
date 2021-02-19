@@ -12,3 +12,4 @@ my_electionproxy_alternate = "PRES16"
 #my_electiondatafile = "./PA-shapefiles-master/PA_VTDs.json"   #PATH to the election data
 my_electiondatafile ='./shapefiles_multistate/MI-shapefiles-master/MI_precincts/MI_precincts.json'
 state = "MI"
+poptol=0.06

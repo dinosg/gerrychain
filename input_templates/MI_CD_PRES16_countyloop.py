@@ -12,4 +12,6 @@ my_electionproxy_alternate = my_electionproxy
 #my_electiondatafile = "./PA-shapefiles-master/PA_VTDs.json"   #PATH to the election data
 my_electiondatafile ='./shapefiles_multistate/MI-shapefiles-master/MI_precincts/MI_precincts.json'
 state = "MI"
+maxsplitlist=[40, 30  , 20, 15, 14, 13,12]
+cutedgemaxlist  = [2,2, 2, 1.2, 1.2, 1.2,1.2]
 poptol=0.02
