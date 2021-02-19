@@ -21,9 +21,12 @@ any file with 'composite' or 'comp' in the filename adds ALL elections available
 files with 'ppartonly' in name do NOT compute Markov chains at all but instead generate random partitions each and every time to get unbiased samples. Slow but necessary for cases when  Markov chain fails (as they often do for State House districts)
 
 ****
+county splits & gerrychain modifications:
+
 files with 'county' in name have maximum # county splits as a constraint. These files require modifications to gerrychain class - see 'runningachain_xtended' for simple case.
 
-
+chain_xtended.py needs to be included in sourcecode gerrychain director
+_init_.py and county_splits.py need to be included in sourcecode gerrychain/updaters directory
 ______
 
 input_templates:
