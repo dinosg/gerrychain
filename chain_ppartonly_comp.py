@@ -5,7 +5,7 @@ Created on Thu Apr  9 16:47:51 2020
 
 @author: dinos
 
-this version normalizes initial partition to 50% dem /republican
+
 This does NOT perform a Markov chain simulation but instead recreates EACH instance of a simulated district partition from scratch
 using recursive_tree_part to create random districts. While this is slow, 
 Some nice stuff added to DataFrame structure to add congressional district labels in order of actual increasing congressional district No.
@@ -36,20 +36,21 @@ from gerrychain.tree import recursive_tree_part
 from functools import partial
 from strcmp_matlab import strfilter
 import pandas
+import pandas as pd
 import numpy as np
 from gerrychain.metrics import mean_median, efficiency_gap, polsby_popper
-from get_districtlabels import get_labels
+from get_districtlabels import get_labels, get_labels_comp
 from norm_50 import norm_data
 from get_electioninfo import get_elections
 import random
 import os 
  
-def multichain_run(i1, graph, chainlength, my_apportionment, poptol, my_electionproxy, my_electionproxy_alternate, rsw, rmm, reg, rpp, datastruct, state):
+def multichain_run(i1, graph, chainlength, my_apportionment, poptol, my_electionproxy, composite, rsw, rmm, reg, rpp, datastruct, state):
 
  #   poptol = 0.06  #min % population deviation per district
     totsteps = 2
     elections, composite = get_elections(state)
-    time_out=400
+    time_out = 200   #modify depending on how fast a machine usually performs recursive_tree_part
     if "TOTPOP" in graph._node[0]:
         popkey = "TOTPOP"
     elif "PERSONS" in graph._node[0]:
@@ -72,12 +73,12 @@ def multichain_run(i1, graph, chainlength, my_apportionment, poptol, my_election
     my_updaters.update(election_updaters)
 
 
-#INITIAL PARTITION
-    initial_partition, graph, my_updaters = norm_data(graph, my_updaters, my_apportionment, my_electionproxy, my_electionproxy_alternate, state)
+#INITIAL PARTITION (useful for CD labels)
+    initial_partition = GeographicPartition(graph, assignment=my_apportionment, updaters=my_updaters)
     
     #this block obtains the Congressional District Labels and converts to string labels, cds
     
-    cds = get_labels(initial_partition, my_electionproxy) #get congressional district labels
+    cds = get_labels_comp(initial_partition, composite) #get congressional district labels
     nparts = len(initial_partition)
     ideal_population = sum(list(initial_partition["population"].values())) / len(initial_partition)
     random.seed(os.urandom(10)*i1) 
@@ -114,14 +115,29 @@ def multichain_run(i1, graph, chainlength, my_apportionment, poptol, my_election
             
             print(i1,  " got here\n")
             for part in chain:
-                rsw.append(part[my_electionproxy].wins("Democratic"))
-                rmm.append(mean_median(part[my_electionproxy]))
-                reg.append(efficiency_gap(part[my_electionproxy]))
- #               rpp.append(np.mean(pd.Series(polsby_popper(part))))  #depends on geometry of the partition only not on vote outcomes
-                datax = pandas.DataFrame(sorted(part[my_electionproxy].percents("Democratic" )), index=cds)
-                datax = datax.transpose()
-            #    data1 = pandas.concat([data1, pandas.DataFrame(part["SEN12"].percents("Democratic" ))],axis=1)
+                datax = np.zeros((nparts,1))  #nparts = ndistricts
+                rsw_tmp = 0
+                rmm_tmp = 0
+                reg_tmp = 0
+                
+                for compelection in composite:
+                    rsw_tmp += part[compelection].wins("Democratic")
+                    rmm_tmp += mean_median(part[compelection])
+                    reg_tmp += efficiency_gap(part[compelection])
+                    datax += pandas.DataFrame(sorted(part[compelection].percents("Democratic" )), index=cds)
+            
+                rsw_tmp = rsw_tmp/len(composite) #now get average per election instead of sum over all elections
+                rmm_tmp = rmm_tmp/len(composite)
+                reg_tmp = reg_tmp/len(composite)
+                datax = datax.transpose() / len(composite)
+                #rpp.append(np.mean(pd.Series(polsby_popper(part)))) 
+                rpp.append(1) #depends on geometry of the partition only not on vote outcomes
+                rsw.append(rsw_tmp)
+                rmm.append(rmm_tmp)
+                reg.append(reg_tmp)
                 datastruct = pandas.concat([datastruct, datax])
+                
+                
                 if itno % 1 == 0:
                     print("worker ", i1, " iteration = ", itno, "chain = ", zz ,"\n")
                 itno+=1
@@ -132,7 +148,6 @@ def multichain_run(i1, graph, chainlength, my_apportionment, poptol, my_election
                 rsw.append(-1 )
                 rmm.append(-100*mean_median(initial_partition[my_electionproxy]))
                 reg.append(-100*efficiency_gap(initial_partition[my_electionproxy]))
-                rpp.append(-1 )
                 datax = pandas.DataFrame(sorted(initial_partition[my_electionproxy].percents("Democratic" )), index=cds)
                 datax = datax.transpose()
             #    data1 = pandas.concat([data1, pandas.DataFrame(part["SEN12"].percents("Democratic" ))],axis=1)
@@ -147,17 +162,20 @@ if __name__ == '__main__':
     __spec__ = "ModuleSpec(name='builtins', loader=<class '_frozen_importlib.BuiltinImporter'>)"
     dontfeedin = 0  #if set=0, feeds in data, otherwise skip
     poolsize=40
-    chainlength=50
+    chainlength=500
     totsteps = 2
-    normalize='normalized'
+    normalize=''
+    postfix='composite nov20'
     countysp=''
-    postfix='2'
 #DEFINE CONSTANTS:
     dontfeedin = 0  #if set=0, feeds in data, otherwise skip
     
-   # exec(open("input_templates/MI_SENDIST_PRES16.py").read()) #MI SENATE
-    #exec(open("input_templates/PA_SEND_SEN12.py").read()) #PA HOUSE
-    exec(open("input_templates/TX_HD_SEN12.py").read())  #TX HOUSE
+   # exec(open("input_templates/MI_SENDIST_PRES16.py").read())
+    #exec(open("input_templates/PA_HDIST_SEN12.py").read()) 
+    #exec(open("input_templates/WI_ASM_SEN16.py").read()) 
+    exec(open("input_templates/TX_HD_SEN12.py").read()) 
+    #exec(open("input_templates/MD_SEND_PRES16_countyloop.py").read()) #read in input tem
+   #exec(open("input_templates/MA_SEND_PRES16_countyloop.py").read()) #read in input tem
    # my_electionproxy_alternate = my_electionproxy
     #for PA data:
     
@@ -204,23 +222,27 @@ if __name__ == '__main__':
     # cds = get_labels(initial_partition, my_electionproxy) #get congressional district labels
     #RUNNING THE CHAIN
     ideal_population = sum(list(initial_partition["population"].values())) / len(initial_partition)
-    
+    num_districts = len(initial_partition)
     # We use functools.partial to bind the extra parameters (pop_col, pop_target, epsilon, node_repeats)
     # of the recom proposal.
     
     
     t0=time.time()
     #now can do initial_partition and know my_electionproxy will be OK, won't need alternate
-    initial_partition, graph, my_updaters = norm_data(graph, my_updaters, my_apportionment, my_electionproxy, my_electionproxy_alternate, state)
-    cds = get_labels(initial_partition, my_electionproxy) #get congressional district labels
+     
+    cds= get_labels_comp(initial_partition, composite) #get congressional district labels
     # This will take about 10 minutes.
     #setup variables
     rsw = [[0 for x in range(1)] for x in range(poolsize)] #  np.zeros([poolsize, chainlength])
     rmm = [[0 for x in range(1)] for x in range(poolsize)] # np.zeros([poolsize, chainlength])
     reg = [[0 for x in range(1)] for x in range(poolsize)] # np.zeros([poolsize, chainlength])
     rpp = [[0 for x in range(1)] for x in range(poolsize)] # np.zeros([poolsize, chainlength])
-    data1 = pandas.DataFrame(sorted(initial_partition[my_electionproxy ].percents("Democratic") ), index=cds)
-    data1 = data1.transpose()
+    data1 = np.zeros((1,num_districts))
+    for compelection in composite:
+        data1  += initial_partition[compelection].percents("Democratic") 
+
+    data1 = data1/len(composite)
+    data1 = pd.DataFrame(sorted(list(data1)), columns=cds)
     datastruct = []
     #setup parallel list of DataFrames
     for nn in range(poolsize):
@@ -236,7 +258,9 @@ if __name__ == '__main__':
         rsw[i1] = rsw_updated
         rmm[i1] = rmm_updated
         reg[i1] = reg_updated
-        rpp[i1] = rpp_updated
+   #     rpp[i1] = rpp_updated
+        
+        
         datastruct[i1] = datastruct_updated
     #clean up data
     rsw_bak= rsw.copy()   #just to be on the safe side
@@ -261,8 +285,10 @@ if __name__ == '__main__':
             if rsw[nn][kk] > -1 :   #skip over workers that failed timeout, with -1 in 'won districts'
                 reg_clean.append(reg[nn][kk]) 
                 rmm_clean.append(rmm[nn][kk]) 
-                rsw_clean.append(rsw[nn][kk])    
-#                rpp_clean.append(rpp[nn][kk])   
+                rsw_clean.append(rsw[nn][kk]) 
+                #rpp_clean.append(rpp[nn][kk])
+                
+                rpp_clean.append(1)
                  
     #data1 = data1.transpose()
     #data1 = pandas.DataFrame((initial_partition["SEN12"].percents("Democratic") ))
@@ -286,23 +312,24 @@ if __name__ == '__main__':
                 data_condensed= pandas.concat([data_condensed,data_x[kk:kk+1]])
           
     outname = "redist_data/" + state + "_" + my_apportionment + "_" + my_electionproxy + "x" + \
-    str(chainlength)+ "x" + str(poolsize) + normalize + postfix
+    str(chainlength)+ "x" + str(poolsize)  + normalize + postfix
     bc.save1(outname,data_condensed, reg_clean, rmm_clean, rsw_clean, rpp_clean, reg, rmm, rsw, rpp)
     print(t1-t0, "seconds\n")       
     plt.figure()
     fig, ax = plt.subplots(figsize=(8, 6))
     
     # Draw 50% line
-    ax.axhline(0.5, color="#cccccc")
+    #ax.axhline(0.5, color="#cccccc")
+    ax.axhline(0.5, color="b")
     
     # Draw boxplot
     #data1.boxplot(ax=ax, positions=range(len(data1.columns)))
-    data_condensed.boxplot(positions=range(len(data_condensed.columns)))
+    data_condensed.boxplot(positions=range(len(data_condensed.columns)),showfliers=False)
     # Draw initial plan's Democratic vote %s (.iloc[0] gives the first row)
     plt.plot(sorted(data1.iloc[0]), "ro")
     
     # Annotate
-    titlestr = state + " " + my_apportionment + "  x" + str(chainlength) + " x" + str(poolsize) + normalize
+    titlestr = state + " " + my_apportionment + "  x" + str(chainlength) + " x" + str(poolsize) + normalize + postfix
     ax.set_title(titlestr)
     ax.set_ylabel("Democratic vote % " + my_electionproxy)
     ax.set_xlabel("Sorted districts")

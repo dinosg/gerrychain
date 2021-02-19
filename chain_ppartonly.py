@@ -37,18 +37,19 @@ from functools import partial
 from strcmp_matlab import strfilter
 import pandas
 import numpy as np
-from gerrychain.metrics import mean_median, efficiency_gap
+import pandas as pd
+from gerrychain.metrics import mean_median, efficiency_gap, polsby_popper
 from get_districtlabels import get_labels
 from norm_50 import norm_data
 from get_electioninfo import get_elections
 import random
 import os 
  
-def multichain_run(i1, graph, chainlength, my_apportionment, my_electionproxy, my_electionproxy_alternate, rsw, rmm, reg, datastruct, state):
+def multichain_run(i1, graph, chainlength, my_apportionment, poptol, my_electionproxy, my_electionproxy_alternate, rsw, rmm, reg, rpp, datastruct, state):
 
-    poptol = 0.06  #min % population deviation per district
+ #   poptol = 0.06  #min % population deviation per district
     totsteps = 2
-    elections = get_elections(state)
+    elections, composite = get_elections(state)
     time_out = 400   #modify depending on how fast a machine usually performs recursive_tree_part
     if "TOTPOP" in graph._node[0]:
         popkey = "TOTPOP"
@@ -117,6 +118,7 @@ def multichain_run(i1, graph, chainlength, my_apportionment, my_electionproxy, m
                 rsw.append(part[my_electionproxy].wins("Democratic"))
                 rmm.append(mean_median(part[my_electionproxy]))
                 reg.append(efficiency_gap(part[my_electionproxy]))
+                rpp.append(np.mean(pd.Series(polsby_popper(part))))  #depends on geometry of the partition only not on vote outcomes
                 datax = pandas.DataFrame(sorted(part[my_electionproxy].percents("Democratic" )), index=cds)
                 datax = datax.transpose()
             #    data1 = pandas.concat([data1, pandas.DataFrame(part["SEN12"].percents("Democratic" ))],axis=1)
@@ -131,12 +133,13 @@ def multichain_run(i1, graph, chainlength, my_apportionment, my_electionproxy, m
                 rsw.append(-1 )
                 rmm.append(-100*mean_median(initial_partition[my_electionproxy]))
                 reg.append(-100*efficiency_gap(initial_partition[my_electionproxy]))
+                rpp.append(-1 )
                 datax = pandas.DataFrame(sorted(initial_partition[my_electionproxy].percents("Democratic" )), index=cds)
                 datax = datax.transpose()
             #    data1 = pandas.concat([data1, pandas.DataFrame(part["SEN12"].percents("Democratic" ))],axis=1)
                 datastruct = pandas.concat([datastruct, datax])
     # Eeek the 100 seconds timeout occurred while executing the block
-    return i1, rsw, rmm, reg, datastruct 
+    return i1, rsw, rmm, reg, rpp, datastruct 
           
 #MAIN PROGRAM HERE:
     #few key lines for making parallel pool not mess up (freeze_support() and __spec__ definition)
@@ -148,6 +151,8 @@ if __name__ == '__main__':
     chainlength=2
     totsteps = 2
     normalize=' normalized'
+    postfix='1'
+    countysp=''
 #DEFINE CONSTANTS:
     dontfeedin = 0  #if set=0, feeds in data, otherwise skip
     
@@ -157,7 +162,7 @@ if __name__ == '__main__':
     #for PA data:
     
     
-    elections = get_elections(state)
+    elections, composite = get_elections(state)
     
     
     if 'dontfeedin' in globals():
@@ -172,7 +177,8 @@ if __name__ == '__main__':
         else:
             graph = Graph.from_file(my_electiondatafile)
          
-    
+    if 'poptol' not in globals():
+        poptol = 0.03
     if "TOTPOP" in graph._node[0]:
         popkey = "TOTPOP"
     elif "PERSONS" in graph._node[0]:
@@ -212,6 +218,7 @@ if __name__ == '__main__':
     rsw = [[0 for x in range(1)] for x in range(poolsize)] #  np.zeros([poolsize, chainlength])
     rmm = [[0 for x in range(1)] for x in range(poolsize)] # np.zeros([poolsize, chainlength])
     reg = [[0 for x in range(1)] for x in range(poolsize)] # np.zeros([poolsize, chainlength])
+    rpp = [[0 for x in range(1)] for x in range(poolsize)] # np.zeros([poolsize, chainlength])
     data1 = pandas.DataFrame(sorted(initial_partition[my_electionproxy ].percents("Democratic") ), index=cds)
     data1 = data1.transpose()
     datastruct = []
@@ -222,13 +229,14 @@ if __name__ == '__main__':
     #key defs for setting up parallel pool HERE:
     ctx = get_context("spawn")
     p = ctx.Pool(poolsize)
-    updated_vals = p.starmap(multichain_run, [(i1, graph, chainlength, my_apportionment, my_electionproxy, my_electionproxy_alternate,
-                                               rsw[i1], rmm[i1], reg[i1], datastruct[i1], state) for i1 in range(poolsize)])
+    updated_vals = p.starmap(multichain_run, [(i1, graph, chainlength, my_apportionment, poptol, my_electionproxy, my_electionproxy_alternate,
+                                               rsw[i1], rmm[i1], reg[i1], rpp[i1], datastruct[i1], state) for i1 in range(poolsize)])
     
-    for i1, rsw_updated, rmm_updated, reg_updated, datastruct_updated in updated_vals:
+    for i1, rsw_updated, rmm_updated, reg_updated, rpp_updated, datastruct_updated in updated_vals:
         rsw[i1] = rsw_updated
         rmm[i1] = rmm_updated
         reg[i1] = reg_updated
+        rpp[i1] = rpp_updated
         datastruct[i1] = datastruct_updated
     #clean up data
     rsw_bak= rsw.copy()   #just to be on the safe side
@@ -241,17 +249,19 @@ if __name__ == '__main__':
         junk = rsw[nn].pop(0)
         junk = reg[nn].pop(0)
         junk = rmm[nn].pop(0)
-    
+        junk = rpp[nn].pop(0)
     iter1 = range(chainlength * totsteps)   #since the correlation length is 200, only collect every 200th point
     reg_clean = []
     rmm_clean = []
     rsw_clean = []
+    rpp_clean = []
     for nn in range(poolsize):
         for kk in iter1: 
             if rsw[nn][kk] > -1 :   #skip over workers that failed timeout, with -1 in 'won districts'
                 reg_clean.append(reg[nn][kk]) 
                 rmm_clean.append(rmm[nn][kk]) 
-                rsw_clean.append(rsw[nn][kk])           
+                rsw_clean.append(rsw[nn][kk]) 
+     #           rpp_clean.append(rpp[nn][kk]) 
                  
     #data1 = data1.transpose()
     #data1 = pandas.DataFrame((initial_partition["SEN12"].percents("Democratic") ))
@@ -274,8 +284,9 @@ if __name__ == '__main__':
             if rsw[ii][kk] > -1:   #skip over workers that timed out
                 data_condensed= pandas.concat([data_condensed,data_x[kk:kk+1]])
           
-    outname = "redist_data/" + state + "_" + my_apportionment + "_" + my_electionproxy + "x" + str(chainlength)+ "x" + str(poolsize) + normalize
-    bc.save1(outname,data_condensed, reg_clean, rmm_clean, rsw_clean, reg, rmm, rsw)
+    outname = "redist_data/" + state + "_" + my_apportionment + "_" + my_electionproxy + "x" + \
+    str(chainlength)+ "x" + str(poolsize)  + normalize + postfix
+    bc.save1(outname,data_condensed, reg_clean, rmm_clean, rpp_clean, rsw_clean, reg, rmm, rsw, rpp)
     print(t1-t0, "seconds\n")       
     plt.figure()
     fig, ax = plt.subplots(figsize=(8, 6))
@@ -290,7 +301,7 @@ if __name__ == '__main__':
     plt.plot(sorted(data1.iloc[0]), "ro")
     
     # Annotate
-    titlestr = state + " " + my_apportionment + "  x" + str(chainlength) + " x" + str(poolsize) + normalize
+    titlestr = state + " " + my_apportionment + "  x" + str(chainlength) + " x" + str(poolsize) + normalize + postfix
     ax.set_title(titlestr)
     ax.set_ylabel("Democratic vote % " + my_electionproxy)
     ax.set_xlabel("Sorted districts")

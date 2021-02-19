@@ -19,18 +19,18 @@ from gerrychain.metrics import mean_median, efficiency_gap
 from strcmp_matlab import strfilter
 import time
 from norm_50 import norm_data
-from get_districtlabels import get_labels
+from get_districtlabels import get_labels, get_labels_comp
 from get_electioninfo import get_elections
 from gerrychain.tree import recursive_tree_part
 import backup_chain as bc
 import conditional_dump as cd
-from networkx import is_connected, connected_components
-
+import numpy as np
+import pandas as pd
 #SET CONSTANTS HERE:
-hi_eg = -0.045  #spit out maps for anything with efficiency gap over this
+hi_eg = 0.945  #spit out maps for anything with efficiency gap over this
 dontfeedin = 0  #if set=0, feeds in data, otherwise skip
 
-markovchainlength = 100  #length of Markov chain
+markovchainlength = 200  #length of Markov chain
 proposaltype = "recom"
 #exec(open("input_templates/WI_SEN_SEN16.py").read()) 
 #exec(open("input_templates/PA_CD_2011_SEN12.py").read()) 
@@ -39,14 +39,15 @@ proposaltype = "recom"
 
 #
 #exec(open("input_templates/WI_SEN_SEN16.py").read()) 
-#exec(open("input_templates/PA_CD_2011_SEN12.py").read())
-#exec(open("input_templates/PA_REMEDIAL_SEN12.py").read())  
+exec(open("input_templates/PA_CD_2011_SEN12.py").read())
+#exec(open("input_templates/PA_CD_2011_SEN12.py").read())  
 #exec(open("input_templates/NC_judge_EL12G_GV.py").read()) 
-#exec(open("input_templates/OH_CD116_SEN16.py").read()) 
-exec(open("input_templates/FL_CD116_SEN16.py").read())   
+#exec(open("input_templates/MA_SEND_PRES16.py").read()) 
+#exec(open("input_templates/MD_SEND_PRES16_countyloop.py").read())
 elections, composite = get_elections(state)
 
-poptol = 0.03 # population tolerance
+if 'poptol' not in globals():
+        poptol = 0.03
 
 if 'dontfeedin' in globals():
     if dontfeedin == 0 or not( 'graph_PA' in globals()):
@@ -59,13 +60,7 @@ else:
         graph_PA = Graph.from_json(my_electiondatafile)
     else:
         graph_PA = Graph.from_file(my_electiondatafile)
-
-components = list(connected_components(graph_PA))     
-biggest_component_size = max(len(c) for c in components)
-problem_components = [c for c in components if len(c) != biggest_component_size]
-for component in problem_components:
-    for node in component:
-        graph_PA.remove_node(node)
+     
 t0=time.time()
 if "TOTPOP" in graph_PA._node[0]:
     popkey = "TOTPOP"
@@ -96,13 +91,14 @@ my_updaters.update(election_updaters)
 #INITIAL PARTITION
 #initial_partition, graph_PA, my_updaters = norm_data(graph_PA, my_updaters, "CD_2011", "SEN12", "USS12")
 initial_partition = GeographicPartition(graph_PA, assignment=my_apportionment, updaters=my_updaters)
-cds = get_labels(initial_partition, my_electionproxy) #get congressional district labels
+cds = get_labels_comp(initial_partition,composite) #get congressional district labels
 
 #SETUP MARKOV CHAIN PROPOSAL W RECOM
 # The ReCom proposal needs to know the ideal population for the districts so that
 # we can improve speed by bailing early on unbalanced partitions.
 #ideal_population = sum(initial_partition["population"].values()) / len(initial_partition)
-ideal_population = sum(list(initial_partition["population"].values())) / len(initial_partition)
+num_districts = len(initial_partition)  #the # of districts
+ideal_population = sum(list(initial_partition["population"].values())) / num_districts
 
 # We use functools.partial to bind the extra parameters (pop_col, pop_target, epsilon, node_repeats)
 # of the recom proposal.
@@ -127,9 +123,9 @@ if "recom" in proposaltype:
     nparts = len(initial_partition)
     
 #CONFIGURE MARKOV CHAIN
-    #ranpart = recursive_tree_part(graph_PA, range(nparts), ideal_population, popkey, poptol/2,node_repeats=1)
+    ranpart = recursive_tree_part(graph_PA, range(nparts), ideal_population, popkey, poptol/2,node_repeats=1)
     
-    #randpartition = GeographicPartition(graph_PA,assignment = ranpart, updaters = my_updaters)
+    randpartition = GeographicPartition(graph_PA,assignment = ranpart, updaters = my_updaters)
    # exec(open("partition_clean.py").read()) 
     chain = MarkovChain(
         proposal=proposal,
@@ -138,7 +134,7 @@ if "recom" in proposaltype:
             compactness_bound
         ],
         accept=accept.always_accept,
-        initial_state= initial_partition, #randpartition,        #initial_state=initial_partition,
+        initial_state= randpartition,        #initial_state=initial_partition,
         total_steps=markovchainlength
     )
 else:  #random flip
@@ -165,21 +161,47 @@ data = pandas.datarame(
 rsw = []
 rmm = []
 reg = []
-data1 = pandas.DataFrame(sorted(initial_partition[my_electionproxy].percents("Democratic") ), index = cds)
+num_districts = len(initial_partition)
+data1 = np.zeros((1,num_districts))
+for compelection in composite:
+    data1  += initial_partition[compelection].percents("Democratic") 
 
-data1=data1.transpose()
-#data1.columns = congressdistrictlabels
-#data1 = data1.transpose()
-#data1 = pandas.DataFrame((initial_partition["SEN12"].percents("Democratic") ))
+data1 = data1/len(composite)
+
+
+data1 = pd.DataFrame(np.sort(data1), columns=cds)
+
+it = 0
+print('begin chain calc \n')
+#loop over each markov chain iteration
 for part in chain:
-    rsw.append(part[my_electionproxy].wins("Democratic"))
-    rmm.append(mean_median(part[my_electionproxy]))
-    reg.append(efficiency_gap(part[my_electionproxy]))
-    datax = pandas.DataFrame(sorted(part[my_electionproxy].percents("Democratic" )), index=cds)
-    datax = datax.transpose()
-#    data1 = pandas.concat([data1, pandas.DataFrame(part["SEN12"].percents("Democratic" ))],axis=1)
+    #reset each counter before looping over each election in composite
+    datax = np.zeros((num_districts,1))
+    rsw_tmp = 0
+    rmm_tmp = 0
+    reg_tmp = 0
+    for compelection in composite:
+        rsw_tmp += part[compelection].wins("Democratic")
+        rmm_tmp += mean_median(part[compelection])
+        reg_tmp += efficiency_gap(part[compelection])
+        datax += pandas.DataFrame(sorted(part[compelection].percents("Democratic" )), index=cds)
+        
+    rsw_tmp = rsw_tmp/len(composite) #now get average per election instead of sum over all elections
+    rmm_tmp = rmm_tmp/len(composite)
+    reg_tmp = reg_tmp/len(composite)
+    datax = datax.transpose() / len(composite)
+    rsw.append(rsw_tmp)
+    rmm.append(rmm_tmp)
+    reg.append(reg_tmp)
+    print('it# ', it)
+    it+=1
+    
+    #datax = datax.transpose()
+
     data1 = pandas.concat([data1, datax])
-   # cd.eg_gt(part,hi_eg, state, my_apportionment,my_electionproxy, 0)
+    #
+    #this line checks to see if efficiency gap fills some criteria, if so dump assignments & identifiers to file
+    #cd.eg_gt(part,hi_eg, state, my_apportionment,my_electionproxy, 0)
 
 
 fig, ax = plt.subplots(figsize=(8, 6))
@@ -191,7 +213,7 @@ ax.axhline(0.5, color="#cccccc")
 data1.boxplot(ax=ax, positions=range(len(data1.columns)),showfliers=False)
 
 # Draw initial plan's Democratic vote %s (.iloc[0] gives the first row)
-plt.plot(data1.iloc[0], "ro")
+plt.plot(np.array(data1.iloc[0]), "ro")
 
 # Annotate
 titlestr = state + " " + my_apportionment + "  x" + str(markovchainlength)
@@ -211,3 +233,4 @@ t1=time.time()
 print((t1 - t0)/60 ," min runtime\n")
 outname = "redist_data/" + state + "_" + my_apportionment + "_" + my_electionproxy + "x" + str(markovchainlength)
 bc.save(outname,data1, reg, rmm, rsw)
+

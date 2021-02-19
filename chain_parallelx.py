@@ -18,7 +18,7 @@ uses recom proposal
 from multiprocessing import set_start_method, freeze_support
 #from multiprocessing import Pool
 from multiprocessing import get_context
-import backup_chain as bc
+
 import matplotlib.pyplot as plt
 import time
 from gerrychain import (GeographicPartition, Partition, Graph, MarkovChain,
@@ -26,18 +26,20 @@ from gerrychain import (GeographicPartition, Partition, Graph, MarkovChain,
 from gerrychain.proposals import recom
 from gerrychain.tree import recursive_tree_part
 from functools import partial
-from strcmp_matlab import strfilter
+import pandas as pd
 import pandas
 import numpy as np
-from gerrychain.metrics import mean_median, efficiency_gap
+from gerrychain.metrics import mean_median, efficiency_gap, polsby_popper
 from get_districtlabels import get_labels
 from get_electioninfo import get_elections
 import random
 import os 
-def multichain_run(i1, graph, chainlength, my_apportionment, my_electionproxy, my_electionproxy_alternate, rsw, rmm, reg, datastruct, state):
+import conditional_dump as cd
+def multichain_run(i1, graph, chainlength, my_apportionment, poptol, my_electionproxy, my_electionproxy_alternate, rsw, rmm, reg, rpp, datastruct, state):
+    hi_eg = 1.12  #spit out maps for anything with efficiency gap over this
     random.seed(os.urandom(10)*i1) 
-    poptol = 0.03  #min population deviation
-    elections = get_elections(state)
+ #   poptol = 0.03  #min population deviation
+    elections, composite = get_elections(state)
     
     if "TOTPOP" in graph._node[0]:
         popkey = "TOTPOP"
@@ -98,11 +100,14 @@ def multichain_run(i1, graph, chainlength, my_apportionment, my_electionproxy, m
         rsw.append(part[my_electionproxy].wins("Democratic"))
         rmm.append(mean_median(part[my_electionproxy]))
         reg.append(efficiency_gap(part[my_electionproxy]))
+        #rpp.append(np.mean(pd.Series(polsby_popper(part))))  #depends on geometry of the partition only not on vote outcomes
         datax = pandas.DataFrame(sorted(part[my_electionproxy].percents("Democratic" )), index=cds)
         datax = datax.transpose()
     #    data1 = pandas.concat([data1, pandas.DataFrame(part["SEN12"].percents("Democratic" ))],axis=1)
         datastruct = pandas.concat([datastruct, datax])
-    return i1, rsw, rmm, reg, datastruct           
+        cd.eg_gt(part,hi_eg, state, my_apportionment,my_electionproxy, i1)
+        #print(i1,'\n')
+    return i1, rsw, rmm, reg, rpp, datastruct           
 
 #MAIN PROGRAM HERE:
     #few key lines for making parallel pool not mess up (freeze_support() and __spec__ definition)
@@ -111,8 +116,9 @@ if __name__ == '__main__':
     __spec__ = "ModuleSpec(name='builtins', loader=<class '_frozen_importlib.BuiltinImporter'>)"
     dontfeedin = 0  #if set=0, feeds in data, otherwise skip
     poolsize=40
-    chainlength=100
+    chainlength=400
     normalize=''
+    countysp =''
       
         #    set_start_method("spawn")
         #    set_start_method("spawn")
@@ -127,8 +133,12 @@ if __name__ == '__main__':
     #exec(open("input_templates/PA_HDIST_SEN12.py").read()) 
     #exec(open("input_templates/PA_CD_2011_SEN12.py").read()) 
     #exec(open("input_templates/MI_SENDIST_PRES16.py").read()) 
-    exec(open("input_templates/PA_CD_2011_SEN12.py").read()) 
-    elections = get_elections(state)
+    #exec(open("input_templates/PA_CD_2011_SEN12.py").read()) 
+    #exec(open("input_templates/NC_newplan_EL12G_GV.py").read()) 
+    #exec(open("input_templates/PA_REMEDIAL_SEN12.py").read()) 
+    exec(open("input_templates/WI_SEN_SEN16_countyloop.py").read()) 
+    
+    elections, composite = get_elections(state)
     #read in data file here:
     """
     if 'dontfeedin' in globals():
@@ -150,6 +160,8 @@ if __name__ == '__main__':
     #SETUP initial_partition & get initial DataFrame here - redundant but needed to setup datastruct
     #in parallel - 0th point resu, then append to it
     # 
+    if 'poptol' not in globals():
+        poptol = 0.03
     if "TOTPOP" in graph_PA._node[0]:
         popkey = "TOTPOP"
     elif "PERSONS" in graph_PA._node[0]:
@@ -180,22 +192,24 @@ if __name__ == '__main__':
     rsw = [[0 for x in range(1)] for x in range(poolsize)] #  np.zeros([poolsize, chainlength])
     rmm = [[0 for x in range(1)] for x in range(poolsize)] # np.zeros([poolsize, chainlength])
     reg = [[0 for x in range(1)] for x in range(poolsize)] # np.zeros([poolsize, chainlength])
+    rpp = [[0 for x in range(1)] for x in range(poolsize)] # np.zeros([poolsize, chainlength])
     data1 = pandas.DataFrame(sorted(initial_partition[my_electionproxy].percents("Democratic") ), index=cds)
     data1 = data1.transpose()
     datastruct = []
     #setup parallel list of DataFrames
     for nn in range(poolsize):
         datastruct.append(data1)
-    ctx = get_context("spawn")
+    ctx = get_context("spawn")  #was spawn, try fork
     p = ctx.Pool(poolsize)
         
-    updated_vals = p.starmap(multichain_run, [(i1, graph_PA, chainlength, my_apportionment, my_electionproxy, my_electionproxy_alternate,
-                                               rsw[i1], rmm[i1], reg[i1], datastruct[i1], state) for i1 in range(poolsize)])
+    updated_vals = p.starmap(multichain_run, [(i1, graph_PA, chainlength, my_apportionment, poptol, my_electionproxy, my_electionproxy_alternate,
+                                               rsw[i1], rmm[i1], reg[i1], rpp[i1], datastruct[i1], state) for i1 in range(poolsize)])
     
-    for i1, rsw_updated, rmm_updated, reg_updated, datastruct_updated in updated_vals:
+    for i1, rsw_updated, rmm_updated, reg_updated, rpp_updated, datastruct_updated in updated_vals:
         rsw[i1] = rsw_updated
         rmm[i1] = rmm_updated
         reg[i1] = reg_updated
+        rpp[i1] = rpp_updated
         datastruct[i1] = datastruct_updated
     #clean up data
     rsw_bak= rsw.copy()   #just to be on the safe side
@@ -208,16 +222,19 @@ if __name__ == '__main__':
         junk = rsw[nn].pop(0)
         junk = reg[nn].pop(0)
         junk = rmm[nn].pop(0)
+        junk = rpp[nn].pop(0)
     
     iter1 = range(100-1,100+chainlength-1,100)   #since the correlation length is 200, only collect every 200th point
     reg_clean = []
     rmm_clean = []
     rsw_clean = []
+    rpp_clean = []
     for nn in range(poolsize):
         for kk in iter1: 
             reg_clean.append(reg[nn][kk]) 
             rmm_clean.append(rmm[nn][kk]) 
-            rsw_clean.append(rsw[nn][kk])           
+            rsw_clean.append(rsw[nn][kk]) 
+        #    rpp_clean.append(rsw[nn][kk]) 
                  
     #data1 = data1.transpose()
     #data1 = pandas.DataFrame((initial_partition["SEN12"].percents("Democratic") ))
