@@ -25,8 +25,10 @@ county splits & gerrychain modifications:
 
 files with 'county' in name have maximum # county splits as a constraint. These files require modifications to gerrychain class - see 'runningachain_xtended' for simple case.
 
-chain_xtended.py needs to be included in sourcecode gerrychain director
+chain_xtended.py needs to be included in sourcecode gerrychain directory
 _init_.py and county_splits.py need to be included in sourcecode gerrychain/updaters directory
+
+county_splits.py is modified from original - MUST go in gerrychain/updaters folder  for multithreaded computing to wrok 
 ______
 
 input_templates:
