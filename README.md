@@ -20,6 +20,8 @@ any file with 'composite' or 'comp' in the filename adds ALL elections available
 
 files with 'ppartonly' in name do NOT compute Markov chains at all but instead generate random partitions each and every time to get unbiased samples. Slow but necessary for cases when  Markov chain fails (as they often do for State House districts)
 
+splice_assignment_fn.py  'splices in' a new district assignment from a csv/ text files and merges it to an existing geodataframe with state VTD shapes and election data, defines my_apportionment to be something new (reflecting what's in the file). Extremely useful for assessing test plans, or constructing new
+district mappings from intermediate stored results
 ****
 county splits & gerrychain modifications:
 
