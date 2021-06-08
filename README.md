@@ -22,6 +22,8 @@ files with 'ppartonly' in name do NOT compute Markov chains at all but instead g
 
 splice_assignment_fn.py  'splices in' a new district assignment from a csv/ text files and merges it to an existing geodataframe with state VTD shapes and election data, defines my_apportionment to be something new (reflecting what's in the file). Extremely useful for assessing test plans, or constructing new
 district mappings from intermediate stored results
+
+conditional_dump.py tests a partition state against some condition - if it meets it, dumps out the VTD assignments to a text file. Uses routines in district_list.py for output
 ****
 county splits & gerrychain modifications:
 
