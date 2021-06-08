@@ -21,7 +21,7 @@ from multiprocessing import get_context
 
 import matplotlib.pyplot as plt
 import time
-from gerrychain import (GeographicPartition, Partition, Graph, MarkovChain_xtended,
+from gerrychain import (GeographicPartition, Partition, Graph, MarkovChain_xtendedmmgt,
                         proposals, updaters, constraints, accept, Election)
 from gerrychain.proposals import recom
 from gerrychain.tree import recursive_tree_part
@@ -41,7 +41,7 @@ import district_list as dl
 import conditional_dump as cd
 
 def multichain_run(i1, graph, chainlength, my_apportionment, poptol, my_electionproxy, composite, rsw, rmm, reg, rpp, datastruct, state, splitno, maxsplits, cutedgemax):
-    hi_mm = -.055 #spit out maps for anything with efficiency gap over this
+    hi_mm = -.02#spit out maps for anything with efficiency gap over this
     #cutedgemax=1.2 #factor above initial partition, cut edges allowed 
     random.seed(os.urandom(10)*i1) 
 #    poptol = 0.03  #min population deviation
@@ -77,6 +77,7 @@ def multichain_run(i1, graph, chainlength, my_apportionment, poptol, my_election
     cds = get_labels_comp(initial_partition, composite) #get congressional district labels
 
     nparts = len(initial_partition)
+    print(nparts)
     #ranpart = recursive_tree_part(graph, range(nparts), ideal_population, popkey,poptol - .01,node_repeats=1)
     #randpartition = GeographicPartition(graph,assignment = ranpart, updaters = my_updaters)
     
@@ -93,7 +94,7 @@ def multichain_run(i1, graph, chainlength, my_apportionment, poptol, my_election
     lambda p: len(p["cut_edges"]),
     cutedgemax*len(initial_partition["cut_edges"])
     )
-    chain = MarkovChain_xtended(
+    chain = MarkovChain_xtendedmmgt(
     proposal=proposal,
     constraints=[ contiguous_parts,
         pop_constraint,
@@ -101,10 +102,11 @@ def multichain_run(i1, graph, chainlength, my_apportionment, poptol, my_election
     accept=accept.always_accept,
     initial_state= initial_partition, #randpartition,
     total_steps=chainlength,
+    my_electionproxy = my_electionproxy,
     maxsplits = maxsplits
     )
     for part in chain:
-        if part.good == 1:
+        if (part.good == 1) or (part.good == -1):
             datax = np.zeros((nparts,1))  #nparts = ndistricts
             rsw_tmp = 0
             rmm_tmp = 0
@@ -129,8 +131,13 @@ def multichain_run(i1, graph, chainlength, my_apportionment, poptol, my_election
             reg.append(reg_tmp)
             datastruct = pandas.concat([datastruct, datax])
             splitno.append(total_splits(part.state))   #splits don't depend on individual election results, only on partition so not in loop
-           
-            cd.mm_gt(part.state,hi_mm, state, my_apportionment,my_electionproxy, i1, 'county')
+            cd.cd_gt(part.state,hi_mm,rmm_tmp ,state, my_apportionment,my_electionproxy, i1, '_cdgt')
+            if (part.good == -1) or (part.good == 1):
+                mmval = mean_median(part.state[my_electionproxy])
+                print('worker ', i1, 'mm valued = ' , mmval)
+                cd.mm_gt(part.state,hi_mm-.3, state, my_apportionment,my_electionproxy, i1, '_mmgt')
+            if i1 == 1:
+                print(i1, ' finished chain step ', part.counter)
             #cd.eg_zero(part,zero_eg, state, my_apportionment, my_electionproxy, i1)
     return i1, rsw, rmm, reg, rpp, datastruct, splitno           
 
@@ -139,15 +146,14 @@ def multichain_run(i1, graph, chainlength, my_apportionment, poptol, my_election
 if __name__ == '__main__':
     freeze_support()
     __spec__ = "ModuleSpec(name='builtins', loader=<class '_frozen_importlib.BuiltinImporter'>)"
-    dontfeedin = 1  #if set=0, feeds in data, otherwise skip
-    poolsize=80
-    chainlength=100
+    dontfeedin = 0 #if set=0, feeds in data, otherwise skip
+    poolsize=40
+    chainlength=15000
     corrlength=50
     #maxsplits=210
-    maxsplits = 200
-    cutedgemax  = 1.1
-    countysp = 'xsplitsrand ' +str(maxsplits)  #labels for graphs and output filenames
-    normalize=''
+
+ 
+    
       
         #    set_start_method("spawn")
         #    set_start_method("spawn")
@@ -159,7 +165,7 @@ if __name__ == '__main__':
     
     #state = "WI"
     proposaltype = "recom"
-    exec(open("input_templates/PA_HDIST_test.py").read()) 
+    #exec(open("input_templates/PA_HDIST_SEN12_assignment_y.py").read()) 
     #exec(open("input_templates/PA_SEND_SEN12_countyloop.py").read()) 
     
     #exec(open("input_templates/PA_CD_2011_SEN12.py").read()) 
@@ -168,9 +174,13 @@ if __name__ == '__main__':
     #exec(open("input_templates/PA_REMEDIAL_SEN12.py").read()) 
 #    exec(open("input_templates/PA_CD_2011_SEN12_countyloop.py").read()) 
    # exec(open("input_templates/PA_SEND_SEN12_countyloop.py").read()) 
+    #exec(open("input_templates/PA_districtr17shrinkmm-006.py").read()) 
+    exec(open("input_templates/PA_districtr17shrink1.py").read()) 
+    countysp = 'xsplitsrand ' +str(maxsplits)  #labels for graphs and output filenames
+    normalize=''
     elections, composite = get_elections(state)
     #read in data file here:
-    """
+   
     if 'dontfeedin' in globals():
         if dontfeedin == 0 or not( 'graph_PA' in globals()):
             if ".json" in my_electiondatafile:
@@ -182,11 +192,8 @@ if __name__ == '__main__':
             graph_PA = Graph.from_json(my_electiondatafile)
         else:
             graph_PA = Graph.from_file(my_electiondatafile)
-    """
-    if ".json" in my_electiondatafile:
-                graph_PA = Graph.from_json(my_electiondatafile)
-    else:
-                graph_PA = Graph.from_file(my_electiondatafile)
+   
+    
     #SETUP initial_partition & get initial DataFrame here - redundant but needed to setup datastruct
     #in parallel - 0th point resu, then append to it
     # 

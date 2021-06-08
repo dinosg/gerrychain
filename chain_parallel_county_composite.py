@@ -129,7 +129,7 @@ def multichain_run(i1, graph, chainlength, my_apportionment, poptol, my_election
             datastruct = pandas.concat([datastruct, datax])
             splitno.append(total_splits(part.state)) #splits don't depend on individual election results, only on partition so not in loop
            
-            cd.eg_gt(part.state,hi_eg, state, my_apportionment,my_electionproxy, i1, 'county')
+            #cd.eg_gt(part.state,hi_eg, state, my_apportionment,my_electionproxy, i1, 'county')
             #cd.eg_zero(part,zero_eg, state, my_apportionment, my_electionproxy, i1)
     return i1, rsw, rmm, reg, rpp, datastruct, splitno           
 
@@ -140,9 +140,9 @@ if __name__ == '__main__':
     __spec__ = "ModuleSpec(name='builtins', loader=<class '_frozen_importlib.BuiltinImporter'>)"
     dontfeedin = 1  #if set=0, feeds in data, otherwise skip
     poolsize=40
-    chainlength=100
+    chainlength=1000
     corrlength=50
-    maxsplits=20
+    maxsplits=51
     countysp = ' splitsrand ' +str(maxsplits)  #labels for graphs and output filenames
     normalize=''
       
@@ -160,7 +160,7 @@ if __name__ == '__main__':
     #exec(open("input_templates/PA_CD_2011_SEN12.py").read()) 
     #exec(open("input_templates/MI_SENDIST_PRES16.py").read()) 
     #exec(open("input_templates/PA_CD_2011_SEN12.py").read()) 
-    exec(open("input_templates/PA_CD_2011_SEN12_countyloop.py").read()) 
+    exec(open("input_templates/PA_SEND_SEN12_countyloop.py").read()) 
     elections, composite = get_elections(state)
     #read in data file here:
     """

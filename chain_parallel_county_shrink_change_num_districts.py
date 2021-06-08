@@ -42,6 +42,7 @@ import conditional_dump as cd
 
 def multichain_run(i1, graph, chainlength, my_apportionment, poptol, my_electionproxy, composite, rsw, rmm, reg, rpp, datastruct, state, splitno, maxsplits, cutedgemax):
     hi_mm = -.055 #spit out maps for anything with efficiency gap over this
+    losedistricts = 1 #loss of 1 district compared to initial partition
     #cutedgemax=1.2 #factor above initial partition, cut edges allowed 
     random.seed(os.urandom(10)*i1) 
 #    poptol = 0.03  #min population deviation
@@ -73,15 +74,16 @@ def multichain_run(i1, graph, chainlength, my_apportionment, poptol, my_election
     initial_partition = GeographicPartition(graph, assignment=my_apportionment, updaters=my_updaters)
     
     #this block obtains the Congressional District Labels and converts to string labels, cds
-    ideal_population = sum(list(initial_partition["population"].values())) / len(initial_partition)
-    cds = get_labels_comp(initial_partition, composite) #get congressional district labels
+    #SHRINK # DISTRICTS BY 1
+    ideal_population = sum(list(initial_partition["population"].values())) / (len(initial_partition)-losedistricts)
+    #cds = get_labels_comp(initial_partition, composite) #get congressional district labels
 
-    nparts = len(initial_partition)
-    #ranpart = recursive_tree_part(graph, range(nparts), ideal_population, popkey,poptol - .01,node_repeats=1)
-    #randpartition = GeographicPartition(graph,assignment = ranpart, updaters = my_updaters)
+    nparts = len(initial_partition)-losedistricts
+    ranpart = recursive_tree_part(graph, range(nparts), ideal_population, popkey,poptol - .01,node_repeats=1)
+    randpartition = GeographicPartition(graph,assignment = ranpart, updaters = my_updaters)
     
 
-    pop_constraint = constraints.within_percent_of_ideal_population(initial_partition, poptol)
+    pop_constraint = constraints.within_percent_of_ideal_population(randpartition, poptol)
     proposal = partial(recom,
                    pop_col=popkey,
                    pop_target=ideal_population,
@@ -99,7 +101,7 @@ def multichain_run(i1, graph, chainlength, my_apportionment, poptol, my_election
         pop_constraint,
         compactness_bound],
     accept=accept.always_accept,
-    initial_state= initial_partition, #randpartition,
+    initial_state= randpartition,
     total_steps=chainlength,
     maxsplits = maxsplits
     )
@@ -115,7 +117,7 @@ def multichain_run(i1, graph, chainlength, my_apportionment, poptol, my_election
                 rsw_tmp += part.state[compelection].wins("Democratic")
                 rmm_tmp += mean_median(part.state[compelection])
                 reg_tmp += efficiency_gap(part.state[compelection])
-                datax += pandas.DataFrame(sorted(part.state[compelection].percents("Democratic" )), index=cds)
+                datax += pandas.DataFrame(sorted(part.state[compelection].percents("Democratic" )), index=range(1,nparts+1))
                 
     
             rsw_tmp = rsw_tmp/len(composite) #now get average per election instead of sum over all elections
@@ -129,9 +131,12 @@ def multichain_run(i1, graph, chainlength, my_apportionment, poptol, my_election
             reg.append(reg_tmp)
             datastruct = pandas.concat([datastruct, datax])
             splitno.append(total_splits(part.state))   #splits don't depend on individual election results, only on partition so not in loop
-           
-            cd.mm_gt(part.state,hi_mm, state, my_apportionment,my_electionproxy, i1, 'county')
+            print('why county' + str(total_splits(part.state)), '\n')
+            cd.mm_gt(part.state,hi_mm, state, my_apportionment,my_electionproxy, i1, 'why county'+ str(total_splits(part.state)) )
             #cd.eg_zero(part,zero_eg, state, my_apportionment, my_electionproxy, i1)
+        elif part.good == -1:
+            print(i1, total_splits(part.state), '\n')
+            cd.mm_gt(part.state,hi_mm-.2, state, my_apportionment,my_electionproxy, i1, 'shrink'+ str(total_splits(part.state)))
     return i1, rsw, rmm, reg, rpp, datastruct, splitno           
 
 #MAIN PROGRAM HERE:
@@ -139,12 +144,13 @@ def multichain_run(i1, graph, chainlength, my_apportionment, poptol, my_election
 if __name__ == '__main__':
     freeze_support()
     __spec__ = "ModuleSpec(name='builtins', loader=<class '_frozen_importlib.BuiltinImporter'>)"
-    dontfeedin = 1  #if set=0, feeds in data, otherwise skip
-    poolsize=80
+    losedistricts = 1 #loss of 1 congressional district compared to initial partition
+    dontfeedin = 0  #if set=0, feeds in data, otherwise skip
+    poolsize=40
     chainlength=100
-    corrlength=50
+    corrlength=20
     #maxsplits=210
-    maxsplits = 200
+    maxsplits = 15
     cutedgemax  = 1.1
     countysp = 'xsplitsrand ' +str(maxsplits)  #labels for graphs and output filenames
     normalize=''
@@ -159,34 +165,32 @@ if __name__ == '__main__':
     
     #state = "WI"
     proposaltype = "recom"
-    exec(open("input_templates/PA_HDIST_test.py").read()) 
-    #exec(open("input_templates/PA_SEND_SEN12_countyloop.py").read()) 
-    
+    #exec(open("input_templates/PA_HDIST_test200.py").read())
+
     #exec(open("input_templates/PA_CD_2011_SEN12.py").read()) 
     #exec(open("input_templates/MI_SENDIST_PRES16.py").read()) 
     #exec(open("input_templates/PA_CD_2011_SEN12.py").read()) 
     #exec(open("input_templates/PA_REMEDIAL_SEN12.py").read()) 
-#    exec(open("input_templates/PA_CD_2011_SEN12_countyloop.py").read()) 
-   # exec(open("input_templates/PA_SEND_SEN12_countyloop.py").read()) 
+    exec(open("input_templates/PA_CD_2011_SEN12_countyloop.py").read()) 
+#    exec(open("input_templates/PA_SEND_SEN12_countyloop.py").read()) 
     elections, composite = get_elections(state)
     #read in data file here:
-    """
+    
     if 'dontfeedin' in globals():
         if dontfeedin == 0 or not( 'graph_PA' in globals()):
             if ".json" in my_electiondatafile:
                 graph_PA = Graph.from_json(my_electiondatafile)
             else:
+              
                 graph_PA = Graph.from_file(my_electiondatafile)
+                
     else:
         if ".json" in my_electiondatafile:
             graph_PA = Graph.from_json(my_electiondatafile)
         else:
             graph_PA = Graph.from_file(my_electiondatafile)
-    """
-    if ".json" in my_electiondatafile:
-                graph_PA = Graph.from_json(my_electiondatafile)
-    else:
-                graph_PA = Graph.from_file(my_electiondatafile)
+    
+  
     #SETUP initial_partition & get initial DataFrame here - redundant but needed to setup datastruct
     #in parallel - 0th point resu, then append to it
     # 
@@ -212,10 +216,11 @@ if __name__ == '__main__':
     my_updaters.update(election_updaters)
     
     initial_partition = GeographicPartition(graph_PA, assignment=my_apportionment, updaters=my_updaters)
-    num_districts = len(initial_partition)
+    num_districts = len(initial_partition) - losedistricts
     cds = get_labels_comp(initial_partition, composite) #get congressional district labels
     #RUNNING THE CHAIN
-    ideal_population = sum(list(initial_partition["population"].values())) / len(initial_partition)
+    #WE ARE SHRIKING THE # OF SEATS BY 1
+    ideal_population = sum(list(initial_partition["population"].values())) / (len(initial_partition)-1)
     t0=time.time()
     
     # This will take about 10 minutes.
@@ -226,18 +231,20 @@ if __name__ == '__main__':
     rpp = [[0 for x in range(1)] for x in range(poolsize)] # np.zeros([poolsize, chainlength])
     splitno = [[0 for x in range(1)] for x in range(poolsize)] 
     data1 = np.zeros((1,num_districts))
+    """
     for compelection in composite:
         data1  += initial_partition[compelection].percents("Democratic") 
 
     data1 = data1/len(composite)
-    data1 = pd.DataFrame(sorted(list(data1)), columns=cds)
+    """
+    data1 = pd.DataFrame(sorted(list(data1)), columns=range(1,num_districts+1))
     datastruct = []
     #setup parallel list of DataFrames
     for nn in range(poolsize):
         datastruct.append(data1)
     ctx = get_context("spawn")
     p = ctx.Pool(poolsize)
-    print('starting parallel runs\n')
+    print('starting parallel runs\n')    
     updated_vals = p.starmap(multichain_run, [(i1, graph_PA, chainlength, my_apportionment, poptol, my_electionproxy, composite,
                                                rsw[i1], rmm[i1], reg[i1], rpp[i1], datastruct[i1], state, splitno[i1], maxsplits, cutedgemax) for i1 in range(poolsize)])
     
