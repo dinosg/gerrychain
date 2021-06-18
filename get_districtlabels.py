@@ -10,6 +10,7 @@ where the_election is "SEN12"
 @author: dinos
 """
 from strcmp_matlab import strfilter
+import numpy as np
 def get_labels(initial_partition, the_election):
 
     ipl=list(initial_partition["population"]) #extract the original congressional district Nos. in order listed
@@ -22,3 +23,19 @@ def get_labels(initial_partition, the_election):
         cds.append(str(nn))
     
     return cds
+
+def get_labels_comp(initial_partition, composite):
+    #does the same thing as above but for a composite LIST of elections not just 1
+    num_elections = len(composite)
+    
+    ipl=list(initial_partition["population"])    
+    numdists = len(ipl)
+    subject = np.zeros((1,numdists)) #start out w/ all zeros but the right shape
+    for compelec in composite:                             #extract the original congressional district Nos. in order listed
+        subject += np.array(initial_partition[compelec].percents("Democratic")) #get the vote % in order appearing in partition
+    subject = subject/num_elections
+    sortindex = np.argsort(subject) 
+    sortindex0 = sortindex[0]
+    cds  = [ipl[kk] for kk in sortindex0]
+    return cds                                                                                     #get the index when you shuffle it through vote%-ordered sort
+    
