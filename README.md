@@ -47,5 +47,7 @@ WI_ltsb_corrected_final.json contains *fixed* shapefiles for Wisconsin, with no 
 
 MI_precincts.json contains *fixed* shapefiles for Michigan, no islands, UP and LP connected (!)
 
+PA2020_2019pop.zip is the PA election data file using 2020 census precinct shapes, 2019 American Community Survey population estimates. Includes 2018 election data
+
 
 
