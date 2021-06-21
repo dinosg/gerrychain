@@ -50,4 +50,7 @@ MI_precincts.json contains *fixed* shapefiles for Michigan, no islands, UP and L
 PA2020_2019pop.zip is the PA election data file using 2020 census precinct shapes, 2019 American Community Survey population estimates. Includes 2018 election data
 
 
+WI2020_censusvtds_overlap_pop19.zip contains updated WI shapefiles & data, using 2020 census vtds, 2019 population estimates
+
+OH_2020_censusvtds_2019pop.zip contains updated OH shapefiles & data, using 2020 census vtds, 2019 population estimates
 
