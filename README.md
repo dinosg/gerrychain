@@ -32,7 +32,8 @@ files with 'county' in name have maximum # county splits as a constraint. These 
 chain_xtended.py needs to be included in sourcecode gerrychain directory
 _init_.py and county_splits.py need to be included in sourcecode gerrychain/updaters directory
 
-county_splits.py is modified from original - MUST go in gerrychain/updaters folder  for multithreaded computing to work 
+county_splits.py is modified from original - MUST go in gerrychain/updaters folder  for county split computations to work 
+total_splits.py computes the # of county splits - looking for the specific text tag in a shapefile that indicates county name (these differ among states)
 ______
 
 input_templates:
