@@ -34,6 +34,26 @@ county_splits.py is modified from original - MUST go in gerrychain/updaters fold
 total_splits.py computes the # of county splits - looking for the specific text tag in a shapefile that indicates county name (these differ among states)
 ______
 
+directed search algorithms:
+these files don't use gerrychain as a random ensemble for statistical analysis but instead use it for random evolution with particular constraints to identify plans with desired characteristics: fewer county splits, more or less democratic seats, better compactness. They call *modified* gerrychain markov chain classes.
+
+fewer county splits:    scripts with _shrink_ 
+                        calls MarkovChain_xtended in chain_xtendedpy
+                        
+more democratic fractional seats: scripts with _fracwinsgt.py. accepts plans that increase the democratic wins of fractional seats
+                                  calls MarkovChain_xtendedfracwinsgt  in chain_xtendedfracwinsgt.py
+                                  
+fewer democratic fractional seats: scripts with _ltfracwins_. accepts plans that decrease the dem wins of fractional seats
+                                    calls MarkovChain_xtended_ltpolish_fracs  in chain_xtended_polish_ltfracs.py
+                                    
+higher median-mean:                scripts with _mmgt - accepts plans that increase mean_median() metric function
+                                   calls MarkovChain_xtendedmmgt  in chain_xtendedmmgt.py
+                                   
+better compactness:                scripts with smooth,  - accepts plans that *reduce* cut_edges
+                                   calls MarkovChain_xtended_polish_fracs in chain_xtended_polish_fracs.py, if preserving dem seat share (to an extent)
+                                   or,
+                                   MarkovChain_xtended_polish_fracs_repub in chain_xtended_polish_fracs_repub.py, if preserving republican seat share
+______
 input_templates:
 contains template files - eg. (state)_race_proxyelection.py  eg. MI_SENDIST_PRES16.py (michigan, state senate districting using 16 pres election as proxy) setting input variables, eg filenames, tagnames, the name of the district type to analyze etc. all in 1 place to be read into script running gerrychain... avoiding all those confusing parameters that need to be set differently depending on the run you're doing. 
 
